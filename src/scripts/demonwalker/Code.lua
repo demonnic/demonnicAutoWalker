@@ -23,9 +23,9 @@ SOFTWARE.
 --]===]
 
 demonnic = demonnic or {}
-demonnic.autowalker = demonnic.wautowalker or {}
+demonnic.autowalker = demonnic.autowalker or {}
 demonnic.autowalker.config = demonnic.autowalker.config or {}
-if demonnic.autowalker.enabled == nil then demonnic.wautowalker.enabled = false end
+if demonnic.autowalker.enabled == nil then demonnic.autowalker.enabled = false end
 
 
 -- Set to false if you don't want to go back to the room you start the walker in when it's done
