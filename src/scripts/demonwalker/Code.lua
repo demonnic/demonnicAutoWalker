@@ -21,12 +21,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 --]===]
-
 demonnic = demonnic or {}
 demonnic.autowalker = demonnic.autowalker or {}
 demonnic.autowalker.config = demonnic.autowalker.config or {}
-if demonnic.autowalker.enabled == nil then demonnic.autowalker.enabled = false end
-
+if demonnic.autowalker.enabled == nil then
+  demonnic.autowalker.enabled = false
+end
 
 -- Set to false if you don't want to go back to the room you start the walker in when it's done
 demonnic.autowalker.config.returnToStart = true
@@ -36,11 +36,13 @@ function demonnic:echo(msg)
 end
 
 function demonnic:findAndRemove(targetTable, item)
-  table.remove(targetTable, table.index_of(targetTable,item))
+  table.remove(targetTable, table.index_of(targetTable, item))
 end
 
 function demonnic.autowalker:init(rooms)
-  if rooms == nil then rooms = {} end
+  if rooms == nil then
+    rooms = {}
+  end
   if type(rooms) ~= "table" then
     demonnic:echo("You tried to initialize the autowalker with an argument, and it was not a table of room ID numbers. Try again")
     return
@@ -58,7 +60,9 @@ function demonnic.autowalker:init(rooms)
   if #rooms ~= 0 then
     area = getRoomArea(rooms[1])
     demonnic.autowalker.area = area
-    if table.contains(rooms, currentRoom) then demonnic:findAndRemove(rooms, currentRoom) end
+    if table.contains(rooms, currentRoom) then
+      demonnic:findAndRemove(rooms, currentRoom)
+    end
     demonnic.autowalker.remainingRooms = table.deepcopy(rooms)
   else
     local areaRooms = getAreaRooms(area)
@@ -77,7 +81,9 @@ function demonnic.autowalker:stop()
   demonnic.autowalker.remainingRooms = nil
   demonnic.autowalker.enabled = false
   demonnic.autowalker:removeEventHandlers()
-  if demonnic.autowalker.config.returnToStart then mmp.gotoRoom(demonnic.autowalker.startingRoom) end
+  if demonnic.autowalker.config.returnToStart then
+    mmp.gotoRoom(demonnic.autowalker.startingRoom)
+  end
 end
 
 function demonnic.autowalker:move()
@@ -109,7 +115,7 @@ function demonnic.autowalker:failedPath()
 end
 
 function demonnic.autowalker:removeEventHandlers()
-  for _,handlerID in pairs(demonnic.autowalker.eventHandlers) do
+  for _, handlerID in pairs(demonnic.autowalker.eventHandlers) do
     killAnonymousEventHandler(handlerID)
   end
 end
@@ -126,7 +132,7 @@ end
 function demonnic.autowalker:closestRoom()
   local roomID = ""
   local distance = 99999
-  for _,v in ipairs(demonnic.autowalker.remainingRooms) do
+  for _, v in ipairs(demonnic.autowalker.remainingRooms) do
     getPath(demonnic.autowalker.currentRoom, v)
     if table.size(speedWalkDir) < distance then
       distance = table.size(speedWalkDir)
