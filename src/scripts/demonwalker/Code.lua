@@ -67,6 +67,10 @@ function demonnic.autowalker:init(rooms)
   else
     local areaRooms = getAreaRooms(area)
     demonnic:findAndRemove(areaRooms, currentRoom)
+    if areaRooms[0] then
+      areaRooms[#areaRooms+1] = areaRooms[0]
+      areaRooms[0] = nil
+    end
     demonnic.autowalker.remainingRooms = table.deepcopy(areaRooms)
   end
   demonnic.autowalker:registerEventHandlers()
@@ -81,6 +85,7 @@ function demonnic.autowalker:stop()
   demonnic.autowalker.remainingRooms = nil
   demonnic.autowalker.enabled = false
   demonnic.autowalker:removeEventHandlers()
+  raiseEvent("demonwalker.finished")
   if demonnic.autowalker.config.returnToStart then
     mmp.gotoRoom(demonnic.autowalker.startingRoom)
   end
@@ -129,15 +134,51 @@ function demonnic.autowalker:registerEventHandlers()
   demonnic.autowalker.eventHandlers.failedPath = registerAnonymousEventHandler("mmapper failed path", demonnic.autowalker.failedPath)
 end
 
-function demonnic.autowalker:closestRoom()
-  local roomID = ""
-  local distance = 99999
-  for _, v in ipairs(demonnic.autowalker.remainingRooms) do
-    getPath(demonnic.autowalker.currentRoom, v)
-    if table.size(speedWalkDir) < distance then
-      distance = table.size(speedWalkDir)
-      roomID = v
+function demonnic.autowalker:getAdjacantRooms(roomID)
+  local adjacentRooms = table.keys(getSpecialExits(roomID))
+  local exits = getRoomExits(roomID)
+  for _,id in pairs(exits) do
+    adjacentRooms[#adjacentRooms+1] = id
+  end
+  return adjacentRooms
+end
+
+function demonnic.autowalker:extractFirstUnvisitedRoom(rooms)
+  local remainingRooms = demonnic.autowalker.remainingRooms
+  for _,id in ipairs(rooms) do
+    if table.contains(remainingRooms, id) then
+      return id
     end
   end
-  return roomID
+  return nil
+end
+
+function demonnic.autowalker:closestRoom()
+  local adjacentRooms = demonnic.autowalker:getAdjacantRooms(mmp.currentroom)
+  local remainingRooms = demonnic.autowalker.remainingRooms
+  if not remainingRooms then return "" end
+  if #remainingRooms == 0 then return "" end
+  local roomID
+  -- check all the directly adjacent rooms
+  roomID = demonnic.autowalker:extractFirstUnvisitedRoom(adjacentRooms)
+  if roomID then return roomID end
+
+  -- ok, check all the rooms 2 steps away
+  for _,id in ipairs(adjacentRooms) do
+    local adjRooms = demonnic.autowalker:getAdjacantRooms(id)
+    roomID = demonnic.autowalker:extractFirstUnvisitedRoom(adjRooms)
+    if roomID then return roomID end
+  end
+
+  -- fine, I'll brute force it.
+  local distance = 99999
+  for _, v in pairs(remainingRooms) do
+    local ok, pathLength = getPath(demonnic.autowalker.currentRoom, v)
+    if ok and pathLength < distance then
+      distance = pathLength
+      roomID = v
+      if distance <= 3 then return roomID end
+    end
+  end
+  return roomID or ""
 end
