@@ -60,7 +60,7 @@ function demonnic.autowalker:init(rooms)
   if #rooms ~= 0 then
     area = getRoomArea(rooms[1])
     demonnic.autowalker.area = area
-    if table.contains(rooms, currentRoom) then
+    if table.index_of(rooms, currentRoom) then
       demonnic:findAndRemove(rooms, currentRoom)
     end
     demonnic.autowalker.remainingRooms = table.deepcopy(rooms)
@@ -146,7 +146,7 @@ end
 function demonnic.autowalker:extractFirstUnvisitedRoom(rooms)
   local remainingRooms = demonnic.autowalker.remainingRooms
   for _,id in ipairs(rooms) do
-    if table.contains(remainingRooms, id) then
+    if table.index_of(remainingRooms, id) then
       return id
     end
   end
