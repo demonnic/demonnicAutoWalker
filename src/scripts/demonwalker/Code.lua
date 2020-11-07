@@ -97,7 +97,7 @@ function demonnic.autowalker:move()
   end
   demonnic.autowalker.nextRoom = demonnic.autowalker:closestRoom()
   if demonnic.autowalker.nextRoom ~= "" then
-    mmp.gotoRoom(demonnic.autowalker.nextRoom)
+    tempTimer(0, function() mmp.gotoRoom(demonnic.autowalker.nextRoom) end)
   else
     raiseEvent("demonwalker.stop")
   end
