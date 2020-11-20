@@ -29,17 +29,75 @@ if demonnic.autowalker.enabled == nil then
 end
 
 -- Set to false if you don't want to go back to the room you start the walker in when it's done
-demonnic.autowalker.config.returnToStart = true
+if demonnic.autowalker.config.returnToStart == nil then
+  demonnic.autowalker.config.returnToStart = true
+end
+demonnic.autowalker.config.avoidList = demonnic.autowalker.config.avoidList or {}
 
 function demonnic:echo(msg)
   cecho(string.format("\n<blue>(<green>Demonnic<blue>):<white> %s", msg))
 end
 
 function demonnic:findAndRemove(targetTable, item)
-  table.remove(targetTable, table.index_of(targetTable, item))
+  local index = table.index_of(targetTable, item)
+  if index then
+    table.remove(targetTable, index)
+    return true
+  end
+  return false
 end
 
-function demonnic.autowalker:init(rooms)
+function demonnic.autowalker:addAvoidRoom(roomID)
+  local ridType = type(roomID)
+  local avoidList = demonnic.autowalker.config.avoidList
+  if ridType == "number" then
+    if not table.index_of(avoidList, roomID) then
+      avoidList[#avoidList+1] = roomID
+    end
+  elseif ridType == "table" then
+    for _,rid in ipairs(roomID) do
+      demonnic.autowalker:addAvoidRoom(rid)
+    end
+  elseif ridType == "string" then
+    local rid = tonumber(roomID)
+    if rid then
+      demonnic.autowalker:addAvoidRoom(rid)
+    end
+  end
+end
+
+function demonnic.autowalker:removeAvoidRoom(roomID)
+  local ridType = type(roomID)
+  local avoidList = demonnic.autowalker.config.avoidList
+  if ridType == "number" then
+    demonnic:findAndRemove(avoidList, roomID)
+  elseif ridType == "table" then
+    for _,rid in ipairs(roomID) do
+      demonnic:findAndRemove(avoidList, rid)
+    end
+  elseif ridType == "string" then
+    local rid = tonumber(roomID)
+    if rid then
+      demonnic:findAndRemove(avoidList, rid)
+    end
+  end
+end
+
+function demonnic.autowalker:filterOutAvoidRooms(rooms, roomsToAvoid)
+  local remainingRooms = {}
+  roomsToAvoid = roomsToAvoid or {}
+  for _,roomID in ipairs(rooms) do
+    if not (table.index_of(demonnic.autowalker.config.avoidList, roomID) or table.index_of(remainingRooms, roomID) or table.index_of(roomsToAvoid, roomID)) then
+      remainingRooms[#remainingRooms+1] = roomID
+    end
+  end
+  return remainingRooms
+end
+
+function demonnic.autowalker:init(rooms, roomsToAvoid)
+  if demonnic.autowalker.enabled then
+    return
+  end
   if rooms == nil then
     rooms = {}
   end
@@ -47,9 +105,11 @@ function demonnic.autowalker:init(rooms)
     demonnic:echo("You tried to initialize the autowalker with an argument, and it was not a table of room ID numbers. Try again")
     return
   end
-
-  if demonnic.autowalker.enabled then
-    return
+  if roomsToAvoid == nil then
+    roomsToAvoid = {}
+  end
+  if type(roomsToAvoid) ~= "table" then
+    demonnic:echo("demonnic.autowalker:init(rooms, roomsToAvoid): roomsToAvoid must be a table if provided, got " .. type(roomsToAvoid))
   end
   demonnic.autowalker.enabled = true
   local currentRoom = mmp.currentroom
@@ -63,7 +123,7 @@ function demonnic.autowalker:init(rooms)
     if table.index_of(rooms, currentRoom) then
       demonnic:findAndRemove(rooms, currentRoom)
     end
-    demonnic.autowalker.remainingRooms = table.deepcopy(rooms)
+    demonnic.autowalker.remainingRooms = demonnic.autowalker:filterOutAvoidRooms(rooms, roomsToAvoid)
   else
     local areaRooms = getAreaRooms(area)
     demonnic:findAndRemove(areaRooms, currentRoom)
@@ -71,7 +131,7 @@ function demonnic.autowalker:init(rooms)
       areaRooms[#areaRooms+1] = areaRooms[0]
       areaRooms[0] = nil
     end
-    demonnic.autowalker.remainingRooms = table.deepcopy(areaRooms)
+    demonnic.autowalker.remainingRooms = demonnic.autowalker:filterOutAvoidRooms(areaRooms, roomsToAvoid)
   end
   demonnic.autowalker:registerEventHandlers()
   raiseEvent("demonwalker.arrived")
