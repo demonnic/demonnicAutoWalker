@@ -106,6 +106,7 @@ It wouldn't be too difficult to port this to other mappers, but it would need:
 * an event which is raised when an autowalk completes successfully ("mmapper arrived" in IRE mapper)
 * an event which is raised when an autowalk fails ("mmapper failed path" in IRE mapper)
 * a way to pause, unpause, and check the paused status of the walker
+* game needs to use telnet GA or EOR so that prompt triggers function
 
 That's really it, everything else is handled by the autowalker.
 
