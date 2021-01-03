@@ -35,6 +35,17 @@ function demonwalker:echo(msg)
   cecho(string.format("\n<purple>(<green>Demonwalker<purple>):<white> %s", msg))
 end
 
+function demonwalker:debugEcho(msg)
+  if not demonwalker.config.debug then return end
+  local msgType = type(msg)
+  if msgType == "table" then
+    demonwalker:echo("DEBUG DISPLAY FOLLOWS\n")
+    display(msg)
+    return
+  end
+  demonwalker:echo("DEBUG: " .. tostring(msg))
+end
+
 function demonwalker:save()
   table.save(demonwalker.saveFile, demonwalker.config)
 end
@@ -269,9 +280,7 @@ function demonwalker.checkForItems(event, ...)
   local atDestination = demonwalker:atDestination()
   for _,item in ipairs(list.items) do
     if searchTargets[item.name] then
-      if demonwalker.config.debug then
-        demonwalker:echo("Stopping because we found something on the search list")
-      end
+      demonwalker:debugEcho("Stopping because we found something on the search list")
       if not atDestination then
         mmp.pause("on")
       end
@@ -279,7 +288,7 @@ function demonwalker.checkForItems(event, ...)
       return
     end
   end
-  demonwalker:echo("Nothing here, moving on")
+  demonwalker:debugEcho("Nothing here, moving on")
   if atDestination then raiseEvent("demonwalker.move") end
 end
 
@@ -354,9 +363,7 @@ end
 function demonwalker:recordPerfTime(steps, checks)
   local perfTime = getStopWatchTime(demonwalker.timerName)
   stopStopWatch(demonwalker.timerName)
-  if demonwalker.config.debug then
-    demonwalker:echo(string.format("Took %.5f seconds to find our room at %d distance and %d checks\n", perfTime, steps, checks))
-  end
+  demonwalker:debugEcho(string.format("Took %.5f seconds to find our room at %d distance and %d checks\n", perfTime, steps, checks))
   demonwalker.performanceTimes[#demonwalker.performanceTimes+1] = {time = perfTime, steps = steps, checks = checks}
 end
 
@@ -436,19 +443,13 @@ function demonwalker:closestRoom()
   }
   local numberOfChecks = 0
   for iteration = 1, demonwalker.config.breadth do
-    if demonwalker.config.debug then
-      demonwalker:echo("Iteration: " .. iteration)
-    end
+    demonwalker:debugEcho("Iteration: " .. iteration)
     local newRooms = {}
     for room,_ in pairs(roomsToCheck) do
-      if demonwalker.config.debug then
-        demonwalker:echo("Checking adjacent rooms of :" .. room)
-      end
+      demonwalker:debugEcho("Checking adjacent rooms of :" .. room)
       for id,_ in pairs(demonwalker:getAdjacentRooms(room)) do
         numberOfChecks = numberOfChecks + 1
-        if demonwalker.config.debug then
-          demonwalker:echo("Checking roomID: " .. id)
-        end
+        demonwalker:debugEcho("Checking roomID: " .. id)
         if remainingRooms[id] then
           demonwalker:recordPerfTime(iteration, numberOfChecks)
           return id
@@ -458,9 +459,7 @@ function demonwalker:closestRoom()
     end
     roomsToCheck = newRooms
   end
-  if demonwalker.config.debug then
-    demonwalker:echo("Did not find a room within the configured breadth:" .. numberOfChecks)
-  end
+  demonwalker:debugEcho("Did not find a room within the configured breadth:" .. numberOfChecks)
   -- we didn't find an unvisited room within demonwalker.config.breadth steps, so now let's loop the remaining rooms list
   local distance = 99999
   local minDistance = demonwalker.config.breadth + 1
