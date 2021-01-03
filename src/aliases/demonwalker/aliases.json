@@ -1,0 +1,6 @@
+[
+  {
+    "name": "dwalk",
+    "regex": "^dwalk(?: (.*))?"
+  }
+]
