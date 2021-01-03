@@ -29,7 +29,32 @@ If it can't get to a room, it just moves on to the next.
 * demonwalker.config.breadth
   * When asked to find the next room to move to, it will search this many rooms away from your current room before falling back to checking the distance to all the remaining rooms and choosing the shortest one. Defaults to 10
 * demonwalker.config.avoidList
-  * list of roomIDs to avoid in **all** walks. demonwalker:addAvoidRoom(roomID) and demonwalker:removeAvoidRoom(roomID) to add/remove items from the list. This table uses roomIDs as keys, it's advised not to alter it directly if you're not familiar with how it works.
+  * list of roomIDs to avoid in **all** walks. demonwalker:addAvoidRoom(roomID) and demonwalker:removeAvoidRoom(roomID) to add/remove items from the list. This table uses roomIDs as keys, it's advised not to alter it directly. See also the dwalk alias below
+
+## Alias
+
+* `dwalk`
+  * prints out the demonwalker configuration.
+* `dwalk usage`
+  * prints out usage information for dwalk alias set
+* `dwalk report`
+  * prints out the performance report for current walk, or last one completed if you're not currently using demonwalker.
+* `dwalk stop`
+  * stops demonwalker. Equivalent to raising the "demonwalker.stop" event
+* `dwalk move`
+  * Tells the walker to move on. Equivalent to raising the "demonwalker.move" event
+* `dwalk avoidList`
+  * prints out the global list of rooms to avoid in **all** walks
+* `dwalk avoid <roomID>`
+  * adds roomID to the global avoid list.
+* `dwalk unavoid <roomID>`
+  * removes roomID from the global avoid list.
+* `dwalk breadth <newBreadth>`
+  * Sets the number of rooms to search from your current one, before just checking all the remaining rooms for the closest. Defaults to 10, and you'll likely never need to change it.
+* `dwalk returnToStart <true/false>`
+  * Set returnToStart value. If true, will return to the room the walk started in when it's stopped/finished.
+* `dwalk debug <true/false>`
+  * Used to turn on/off debug. Will be kind of spammy if turned on, and mostly useful during development.
 
 ## Functions
 
@@ -41,6 +66,8 @@ If it can't get to a room, it just moves on to the next.
   * starts a walk. Options an optional table of options. Valid keys are
     * rooms: a list of roomIDs to visit. IE {1, 2, 4, 10} . If not provided will be the list of all rooms in the area.
     * avoidRooms: a list of roomIDs to make sure is not included in **this** walk. Not saved between walks.
+    * searchTargets: a list of items to check for. IE {"a thief on a leaf", "a dracnari hunk", "a dracnari dreamer"}. 
+      * If this list is provided, then demonwalker will check every room for each of these items, and if any of them are found then and only then will it raise `demonwalker.arrived`. This makes it easy to automate looking for one or more creatures or items in an area, without worrying about stopping the walker yourself.
 * demonwalker:performanceReport()
   * prints out some performance information on the current walk if still running a walk, or the last walk if one has been completed.
 

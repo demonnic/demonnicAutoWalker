@@ -31,7 +31,8 @@ if demonwalker.enabled == nil then
 end
 
 function demonwalker:echo(msg)
-  cecho(string.format("\n<blue>(<green>Demonwalker<blue>):<white> %s", msg))
+  if msg == nil then msg = "" end
+  cecho(string.format("\n<purple>(<green>Demonwalker<purple>):<white> %s", msg))
 end
 
 function demonwalker:save()
@@ -48,7 +49,12 @@ function demonwalker:load()
   if cfg.returnToStart == nil then
     config.returnToStart = true
   else
-    config.returnToStart = true
+    config.returnToStart = cfg.returnToStart
+  end
+  if cfg.debug == nil then
+    config.debug = false
+  else
+    config.debug = cfg.debug
   end
   config.avoidList = cfg.avoidList or {}
   config.breadth = cfg.breadth or 10
@@ -95,6 +101,32 @@ function demonwalker:removeAvoidRoom(roomID)
   demonwalker:save()
 end
 
+function demonwalker:printAvoidList()
+  local aRooms = table.keys(demonwalker.config.avoidList)
+  demonwalker:echo(" avoidList    : {")
+  demonwalker:echo("  ID#  <green>Room Name <white>(<purple>Area Name<white>),")
+  for _,roomID in spairs(aRooms) do
+    local roomName = getRoomName(roomID)
+    roomName = roomName or "Unknown Room"
+    local roomAreaID = getRoomArea(roomID)
+    local roomArea = "Unknown Area"
+    if roomAreaID then
+      roomArea = getRoomAreaName(roomAreaID)
+    end
+    demonwalker:echo(string.format("  %s <green>%s <white>(<purple>%s<white>),", tostring(roomID), roomName, roomArea))
+  end
+  demonwalker:echo(" } -- avoidList")
+end
+
+function demonwalker:displayConfig()
+  demonwalker:echo("demonwalker.config:")
+  demonwalker:echo(" breadth      : " .. demonwalker.config.breadth)
+  demonwalker:echo(" returnToStart: " .. tostring(demonwalker.config.returnToStart))
+  demonwalker:echo(" debug        : " .. tostring(demonwalker.config.debug))
+  demonwalker:printAvoidList()
+  demonwalker:echo("End demonwalker.config")
+end
+
 function demonwalker:removeUnreachable()
   local rooms = {}
   for room,_ in pairs(demonwalker.remainingRooms) do
@@ -113,11 +145,12 @@ function demonwalker:init(options)
   options = options or {}
   local rooms = options.rooms or {}
   local roomsToAvoid = options.avoidRooms or {}
-  demonwalker.search = options.search or {}
+  local searchTargets = options.searchTargets or {}
   demonwalker.enabled = true
   local currentRoom = mmp.currentroom
   demonwalker.currentRoom = currentRoom
   demonwalker.startingRoom = currentRoom
+  demonwalker.nextRoom = currentRoom
   demonwalker.performanceTimes = {}
   local area = getRoomArea(currentRoom)
   demonwalker.area = area
@@ -140,9 +173,22 @@ function demonwalker:init(options)
   for _,roomID in ipairs(roomsToAvoid) do
     demonwalker.remainingRooms[roomID] = nil
   end
+  demonwalker:setSearchTargets(searchTargets)
   demonwalker:removeUnreachable()
   demonwalker:registerEventHandlers()
-  raiseEvent("demonwalker.arrived")
+  if table.is_empty(demonwalker.searchTargets) then
+    raiseEvent("demonwalker.arrived")
+    return
+  end
+  demonwalker.checkForItems()
+end
+
+function demonwalker:setSearchTargets(searchTargets)
+  local targets = {}
+  for _,targetName in ipairs(searchTargets) do
+    targets[targetName] = true
+  end
+  demonwalker.searchTargets = targets
 end
 
 function demonwalker:stop()
@@ -155,8 +201,42 @@ function demonwalker:stop()
   demonwalker:removeEventHandlers()
   raiseEvent("demonwalker.finished")
   if demonwalker.config.returnToStart then
-    mmp.gotoRoom(demonwalker.startingRoom)
+    tempTimer(0, function() mmp.gotoRoom(demonwalker.startingRoom) end)
   end
+end
+
+function demonwalker:usage(attemptedCommand)
+  if attemptedCommand then
+    demonwalker:echo(string.format("You attempted to use '%s' and we do not recognize it", attemptedCommand))
+  end
+  demonwalker:echo("dwalk usage:")
+  demonwalker:echo("dwalk")
+  demonwalker:echo(" - displays this usage information")
+  demonwalker:echo("dwalk config")
+  demonwalker:echo(" - displays the full configuration for demonwalker")
+  demonwalker:echo("dwalk report")
+  demonwalker:echo(" - displays a performance report for the current walk if")
+  demonwalker:echo("   one is running, or previous walk if not.")
+  demonwalker:echo("dwalk stop")
+  demonwalker:echo(" - cancel the current walk, raises 'demonwalker.stop' event")
+  demonwalker:echo("dwalk move")
+  demonwalker:echo(" - move on to the next room in the walk")
+  demonwalker:echo("   raises 'demonwalker.move' event")
+  demonwalker:echo("dwalk avoidList")
+  demonwalker:echo(" - prints out the list of rooms to avoid in all walks")
+  demonwalker:echo("dwalk avoid <roomID>")
+  demonwalker:echo(" - add a roomID to the permanent avoidRooms list")
+  demonwalker:echo("dwalk unavoid <roomID>")
+  demonwalker:echo(" - remove a roomID from the permanent avoidRooms list")
+  demonwalker:echo("dwalk breadth <newBreadth>")
+  demonwalker:echo(" - sets number of rooms away from the current to check")
+  demonwalker:echo("   using breadth-first before brute forcing")
+  demonwalker:echo("dwalk returnToStart <true/false>")
+  demonwalker:echo(" - sets whether to return to your starting room after")
+  demonwalker:echo("   a walk is finished/stopped or not")
+  demonwalker:echo("dwalk debug <true/false>")
+  demonwalker:echo(" - set to true to turn on some debugging echos. WARNING: spammy")
+  demonwalker:echo("end of dwalk usage")
 end
 
 function demonwalker:move()
@@ -164,7 +244,7 @@ function demonwalker:move()
     return
   end
   if mmp.paused then
-    mmp.pause()
+    tempTimer(0, function() mmp.pause() end)
     return
   end
   demonwalker.nextRoom = demonwalker:closestRoom()
@@ -175,11 +255,50 @@ function demonwalker:move()
   end
 end
 
+function demonwalker:atDestination()
+  return tonumber(mmp.currentroom) == tonumber(demonwalker.nextRoom)
+end
+
+function demonwalker.checkForItems(event, ...)
+  local searchTargets = demonwalker.searchTargets
+  if table.is_empty(searchTargets) then return end
+  local list = gmcp.Char.Items.List
+  if list.location ~= "room" then return end
+  if mmp.paused then return end
+  demonwalker.checked = true
+  local atDestination = demonwalker:atDestination()
+  for _,item in ipairs(list.items) do
+    if searchTargets[item.name] then
+      if demonwalker.config.debug then
+        demonwalker:echo("Stopping because we found something on the search list")
+      end
+      if not atDestination then
+        mmp.pause("on")
+      end
+      raiseEvent("demonwalker.arrived")
+      return
+    end
+  end
+  demonwalker:echo("Nothing here, moving on")
+  if atDestination then raiseEvent("demonwalker.move") end
+end
+
 function demonwalker:arrived()
   if tonumber(mmp.currentroom) == tonumber(demonwalker.nextRoom) then
     demonwalker.currentRoom = mmp.currentroom
     demonwalker.remainingRooms[mmp.currentroom] = nil
-    raiseEvent("demonwalker.arrived")
+    if table.is_empty(demonwalker.searchTargets) then
+      raiseEvent("demonwalker.arrived")
+      return
+    end
+    demonwalker.checked = false
+    demonwalker.failsafe = tempPromptTrigger(
+      function()
+        if not demonwalker.checked then
+          demonwalker.checkForItems()
+        end
+      end
+    , 1)
   else
     debugc("demonwalker: Somehow, the mudlet mapper says we have arrived but it is not to the room we said to go to.")
   end
@@ -204,6 +323,7 @@ function demonwalker:registerEventHandlers()
   demonwalker.eventHandlers.stop = registerAnonymousEventHandler("demonwalker.stop", demonwalker.stop)
   demonwalker.eventHandlers.arrived = registerAnonymousEventHandler("mmapper arrived", demonwalker.arrived)
   demonwalker.eventHandlers.failedPath = registerAnonymousEventHandler("mmapper failed path", demonwalker.failedPath)
+  demonwalker.eventHandlers.itemCheck = registerAnonymousEventHandler("gmcp.Char.Items.List", demonwalker.checkForItems)
 end
 
 function demonwalker:getAdjacentRooms(roomID)
@@ -234,13 +354,22 @@ end
 function demonwalker:recordPerfTime(steps, checks)
   local perfTime = getStopWatchTime(demonwalker.timerName)
   stopStopWatch(demonwalker.timerName)
-  demonwalker:echo(string.format("Took %.5f seconds to find our room at %d distance and %d checks\n", perfTime, steps, checks))
+  if demonwalker.config.debug then
+    demonwalker:echo(string.format("Took %.5f seconds to find our room at %d distance and %d checks\n", perfTime, steps, checks))
+  end
   demonwalker.performanceTimes[#demonwalker.performanceTimes+1] = {time = perfTime, steps = steps, checks = checks}
 end
 
 function demonwalker:performanceReport()
   local perfTable = demonwalker.performanceTimes
-  local timesMoved = #perfTable
+  local timesMoved = 0
+  if perfTable then
+    timesMoved = #perfTable
+  end
+  local roomsLeft = 0
+  if demonwalker.remainingRooms then
+    roomsLeft = table.size(demonwalker.remainingRooms)
+  end
   if timesMoved == 0 then
     demonwalker:echo("No performance report to generate, have not moved")
     return
@@ -280,18 +409,21 @@ function demonwalker:performanceReport()
     medianChecks = (checks[half] + checks[half+1]) / 2
   end
   demonwalker:echo("Performance report of current demonwalk!")
-  demonwalker:echo("Note: Number of steps actually taken may be more or less, as the walker does not always")
-  demonwalker:echo("take the reported number of steps due to mmp overshooting or some interruption.")
-  demonwalker:echo(string.format("Total times moved: %d", timesMoved))
-  demonwalker:echo(string.format("Total steps taken: %d", totalSteps))
-  demonwalker:echo(string.format("Avg steps per    : %.3f", averageSteps))
-  demonwalker:echo(string.format("Median steps per : %.3f", medianSteps))
-  demonwalker:echo(string.format("Total time calc. : %.3f", totalTime))
-  demonwalker:echo(string.format("Avg time per     : %.3f", averageTime))
-  demonwalker:echo(string.format("Median time per  : %.3f", medianTime))
-  demonwalker:echo(string.format("Total checks     : %d", totalChecks))
-  demonwalker:echo(string.format("Avg checks per   : %.3f", averageChecks))
-  demonwalker:echo(string.format("Median checks per: %.3f", medianChecks))
+  demonwalker:echo("Note: Number of steps actually taken may be more or less")
+  demonwalker:echo("as the walker does not always take the reported number of")
+  demonwalker:echo("steps due to mmp overshooting or some interruption.")
+  demonwalker:echo(string.format("Rooms left in this walk : %d", roomsLeft))
+  demonwalker:echo(string.format("Total times moved       : %d", timesMoved))
+  demonwalker:echo(string.format("Total steps taken       : %d", totalSteps))
+  demonwalker:echo(string.format("Avg steps per move      : %.3f", averageSteps))
+  demonwalker:echo(string.format("Median steps per move   : %.3f", medianSteps))
+  demonwalker:echo(string.format("Total time calculating  : %.3f", totalTime))
+  demonwalker:echo(string.format("Avg time per move       : %.3f", averageTime))
+  demonwalker:echo(string.format("Median time per move    : %.3f", medianTime))
+  demonwalker:echo(string.format("Total checks            : %d", totalChecks))
+  demonwalker:echo(string.format("Avg checks per move     : %.3f", averageChecks))
+  demonwalker:echo(string.format("Median checks per move  : %.3f", medianChecks))
+  demonwalker:echo("End of performance report")
 end
 
 function demonwalker:closestRoom()
@@ -314,6 +446,9 @@ function demonwalker:closestRoom()
       end
       for id,_ in pairs(demonwalker:getAdjacentRooms(room)) do
         numberOfChecks = numberOfChecks + 1
+        if demonwalker.config.debug then
+          demonwalker:echo("Checking roomID: " .. id)
+        end
         if remainingRooms[id] then
           demonwalker:recordPerfTime(iteration, numberOfChecks)
           return id
