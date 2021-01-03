@@ -20,7 +20,13 @@ If it can't get to a room, it just moves on to the next.
 
 ## Stop moving now, please
 
+### Via lua
+
 `raiseEvent("demonwalker.stop")`
+
+### Via alias
+
+`dwalk stop`
 
 ## Configuration
 
