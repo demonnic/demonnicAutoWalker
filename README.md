@@ -66,7 +66,7 @@ If it can't get to a room, it just moves on to the next.
   * starts a walk. Options an optional table of options. Valid keys are
     * rooms: a list of roomIDs to visit. IE {1, 2, 4, 10} . If not provided will be the list of all rooms in the area.
     * avoidRooms: a list of roomIDs to make sure is not included in **this** walk. Not saved between walks.
-    * searchTargets: a list of items to check for. IE {"a thief on a leaf", "a dracnari hunk", "a dracnari dreamer"}. 
+    * searchTargets: a list of items to check for. IE {"a thief on a leaf", "a dracnari hunk", "a dracnari dreamer"}.
       * If this list is provided, then demonwalker will check every room for each of these items, and if any of them are found then and only then will it raise `demonwalker.arrived`. This makes it easy to automate looking for one or more creatures or items in an area, without worrying about stopping the walker yourself.
 * demonwalker:performanceReport()
   * prints out some performance information on the current walk if still running a walk, or the last walk if one has been completed.
