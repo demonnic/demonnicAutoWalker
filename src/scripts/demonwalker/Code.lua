@@ -138,13 +138,10 @@ function demonwalker:displayConfig()
   demonwalker:echo("End demonwalker.config")
 end
 
-function demonwalker:removeUnreachable()
+function demonwalker:jiggerTable()
   local rooms = {}
   for room,_ in pairs(demonwalker.remainingRooms) do
-    local ok,_ = getPath(demonwalker.currentRoom, room)
-    if ok then
-      rooms[room] = true
-    end
+    rooms[room] = true
   end
   demonwalker.remainingRooms = rooms
 end
@@ -185,7 +182,7 @@ function demonwalker:init(options)
     demonwalker.remainingRooms[roomID] = nil
   end
   demonwalker:setSearchTargets(searchTargets)
-  demonwalker:removeUnreachable()
+  demonwalker:jiggerTable()
   demonwalker:registerEventHandlers()
   if table.is_empty(demonwalker.searchTargets) then
     raiseEvent("demonwalker.arrived")
@@ -415,6 +412,9 @@ function demonwalker:performanceReport()
     medianTime = (times[half] + times[half+1]) / 2
     medianChecks = (checks[half] + checks[half+1]) / 2
   end
+  local longestMove = steps[#steps]
+  local longestTime = times[#times]
+  local mostChecks = checks[#checks]
   demonwalker:echo("Performance report of current demonwalk!")
   demonwalker:echo("Note: Number of steps actually taken may be more or less")
   demonwalker:echo("as the walker does not always take the reported number of")
@@ -424,12 +424,15 @@ function demonwalker:performanceReport()
   demonwalker:echo(string.format("Total steps taken       : %d", totalSteps))
   demonwalker:echo(string.format("Avg steps per move      : %.3f", averageSteps))
   demonwalker:echo(string.format("Median steps per move   : %.3f", medianSteps))
+  demonwalker:echo(string.format("Longest move            : %0d", longestMove))
   demonwalker:echo(string.format("Total time calculating  : %.3f", totalTime))
   demonwalker:echo(string.format("Avg time per move       : %.3f", averageTime))
   demonwalker:echo(string.format("Median time per move    : %.3f", medianTime))
+  demonwalker:echo(string.format("Longest time            : %.3f", longestTime))
   demonwalker:echo(string.format("Total checks            : %d", totalChecks))
   demonwalker:echo(string.format("Avg checks per move     : %.3f", averageChecks))
   demonwalker:echo(string.format("Median checks per move  : %.3f", medianChecks))
+  demonwalker:echo(string.format("Most checks             : %0d", mostChecks))
   demonwalker:echo("End of performance report")
 end
 
@@ -467,7 +470,9 @@ function demonwalker:closestRoom()
   for roomID,_ in pairs(remainingRooms) do
     numberOfChecks = numberOfChecks + 1
     local ok, pathLength = getPath(startingRoom, roomID)
-    if ok and pathLength < distance then
+    if not ok then 
+      remainingRooms[roomID] = nil
+    elseif pathLength < distance then
       distance = pathLength
       targetRoom = roomID
       if distance <= minDistance then
