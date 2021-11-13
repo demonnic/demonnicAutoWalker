@@ -1,7 +1,7 @@
 --[===[
 The MIT License (MIT)
 
-Copyright (c) 2020 Damian Monogue
+Copyright (c) 2020,2021 Damian Monogue
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -182,7 +182,6 @@ function demonwalker:init(options)
     demonwalker.remainingRooms[roomID] = nil
   end
   demonwalker:setSearchTargets(searchTargets)
-  demonwalker:jiggerTable()
   demonwalker:registerEventHandlers()
   if table.is_empty(demonwalker.searchTargets) then
     raiseEvent("demonwalker.arrived")
