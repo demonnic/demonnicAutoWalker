@@ -175,10 +175,10 @@ function demonwalker:init(options)
   for _,roomID in ipairs(rooms) do
     demonwalker.remainingRooms[roomID] = true
   end
-  for _,roomID in ipairs(demonwalker.config.avoidList) do
+  for roomID,_ in pairs(demonwalker.config.avoidList) do
     demonwalker.remainingRooms[roomID] = nil
   end
-  for _,roomID in ipairs(roomsToAvoid) do
+  for roomID,_ in pairs(roomsToAvoid) do
     demonwalker.remainingRooms[roomID] = nil
   end
   demonwalker:setSearchTargets(searchTargets)
