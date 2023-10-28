@@ -66,6 +66,7 @@ elseif command == "explore" then
   registerNamedEventHandler("demonwalker", "explore", "demonwalker.arrived", function()
     raiseEvent("demonwalker.move")
   end)
+  demonwalker:init()
 elseif command == "update" then
   uninstallPackage("demonnicAutoWalker")
   installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")
