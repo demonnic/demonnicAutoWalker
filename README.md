@@ -1,5 +1,9 @@
 # Demonwalker
 
+## Installation
+
+Simply put `lua installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")` in your Mudlet command line and it will download and install the latest version of the package from Github for you. If you already have it installed you can use the `dwalk update` alias if you have version 3.3 or higher.
+
 ## What is this thing
 
 This Mudlet package ties in to the events and functions presented by the IRE mudlet mapper script. It will walk to every room in an area, raising an event when it gets to the target room and waiting for you to raise an event telling it to move to the next room. Alternately you can pass it a table of room IDs to visit and it will visit those room IDs specifically rather than every room in an area.
@@ -45,6 +49,8 @@ If it can't get to a room, it just moves on to the next.
   * prints out usage information for dwalk alias set
 * `dwalk report`
   * prints out the performance report for current walk, or last one completed if you're not currently using demonwalker.
+* `dwalk explore`
+  * automatically explores an area, moving to each new room without stopping
 * `dwalk stop`
   * stops demonwalker. Equivalent to raising the "demonwalker.stop" event
 * `dwalk move`
@@ -61,6 +67,8 @@ If it can't get to a room, it just moves on to the next.
   * Set returnToStart value. If true, will return to the room the walk started in when it's stopped/finished.
 * `dwalk debug <true/false>`
   * Used to turn on/off debug. Will be kind of spammy if turned on, and mostly useful during development.
+* `dwalk update`
+  * Updates the package to the latest version from github.
 
 ## Functions
 

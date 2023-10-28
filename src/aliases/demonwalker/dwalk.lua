@@ -16,6 +16,7 @@ if command == "report" then
   return
 elseif command == "stop" then
   raiseEvent("demonwalker.stop")
+  stopNamedEventHandler("demonwalker", "explore")
   return
 elseif command == "move" then
   raiseEvent("demonwalker.move")
@@ -61,5 +62,12 @@ elseif command == "load" then
 elseif command == "save" then
   demonwalker:save()
   return
+elseif command == "explore" then
+  registerNamedEventHandler("demonwalker", "explore", "demonwalker.arrived", function()
+    raiseEvent("demonwalker.move")
+  end)
+elseif command == "update" then
+  uninstallPackage("demonnicAutoWalker")
+  installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")
 end
 demonwalker:usage(matches[1])
