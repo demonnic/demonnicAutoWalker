@@ -63,12 +63,16 @@ elseif command == "save" then
   demonwalker:save()
   return
 elseif command == "explore" then
+  demonwalker:echo("Time to explore!")
   registerNamedEventHandler("demonwalker", "explore", "demonwalker.arrived", function()
     raiseEvent("demonwalker.move")
   end)
   demonwalker:init()
+  return
 elseif command == "update" then
   uninstallPackage("demonnicAutoWalker")
   installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")
+  demonwalker:echo("demonnicAutoWalker package updated")
+  return
 end
 demonwalker:usage(matches[1])
