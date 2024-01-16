@@ -172,8 +172,14 @@ function demonwalker:init(options)
     end
   end
   demonwalker.remainingRooms = {}
+  demonwalker.failedRooms = {}
   for _,roomID in ipairs(rooms) do
-    demonwalker.remainingRooms[roomID] = true
+    local roomNum = tonumber(roomID)
+    if roomNum then
+      demonwalker.remainingRooms[roomNum] = true
+    else
+      demonwalker.failedRooms[roomID] = true
+    end
   end
   for roomID,_ in pairs(demonwalker.config.avoidList) do
     demonwalker.remainingRooms[roomID] = nil
@@ -196,6 +202,7 @@ function demonwalker:setSearchTargets(searchTargets)
     targets[targetName] = true
   end
   demonwalker.searchTargets = targets
+  demonwalker.matchItems = demonwalker:getMatchItems()
 end
 
 function demonwalker:stop()
@@ -208,7 +215,12 @@ function demonwalker:stop()
   demonwalker:removeEventHandlers()
   raiseEvent("demonwalker.finished")
   if demonwalker.config.returnToStart then
-    tempTimer(0, function() mmp.gotoRoom(demonwalker.startingRoom) end)
+    tempTimer(0, function()
+      mmp.gotoRoom(demonwalker.startingRoom)
+      if mmp.paused then
+        mmp.pause()
+      end
+    end)
   end
 end
 
@@ -257,7 +269,9 @@ function demonwalker:move()
   end
   if mmp.paused then
     tempTimer(0, function() mmp.pause() end)
-    return
+    if not demonwalker:atDestination() then
+      return
+    end
   end
   demonwalker.nextRoom = demonwalker:closestRoom()
   if demonwalker.nextRoom ~= "" then
@@ -271,22 +285,47 @@ function demonwalker:atDestination()
   return tonumber(mmp.currentroom) == tonumber(demonwalker.nextRoom)
 end
 
+function demonwalker:getMatchItems()
+  local searchTargets = demonwalker.searchTargets
+  local matches = {}
+  for target, _ in pairs(searchTargets) do
+    if target:starts("Match:") then
+      matches[#matches+1] = target:sub(7, -1)
+    end
+  end
+  return matches
+end
+
+function demonwalker:foundItem()
+  local atDestination = demonwalker:atDestination()
+  demonwalker:debugEcho("Stopping because we found something on the search list")
+  if not atDestination then
+    mmp.pause("on")
+  end
+  raiseEvent("demonwalker.arrived")
+end
+
 function demonwalker.checkForItems(event, ...)
   local searchTargets = demonwalker.searchTargets
   if table.is_empty(searchTargets) then return end
   local list = gmcp.Char.Items.List
+  local matches = demonwalker.matchItems
   if list.location ~= "room" then return end
   if mmp.paused then return end
   demonwalker.checked = true
   local atDestination = demonwalker:atDestination()
   for _,item in ipairs(list.items) do
-    if searchTargets[item.name] then
-      demonwalker:debugEcho("Stopping because we found something on the search list")
-      if not atDestination then
-        mmp.pause("on")
-      end
-      raiseEvent("demonwalker.arrived")
+    local name = item.name
+    if searchTargets[name] then
+      demonwalker:foundItem()
       return
+    else
+      for _, pattern in ipairs(matches) do
+        if name:match(pattern) then
+          demonwalker:foundItem()
+          return
+        end
+      end
     end
   end
   demonwalker:debugEcho("Nothing here, moving on")
@@ -315,9 +354,14 @@ function demonwalker:arrived()
 end
 
 function demonwalker:failedPath()
+  demonwalker.failedRooms[demonwalker.nextRoom] = true
   demonwalker.remainingRooms[demonwalker.nextRoom] = nil
   demonwalker.currentRoom = mmp.currentroom
   raiseEvent("demonwalker.move")
+end
+
+function demonwalker:getFailedRooms()
+  return table.keys(demonwalker.failedRooms)
 end
 
 function demonwalker:removeEventHandlers()
@@ -419,6 +463,7 @@ function demonwalker:performanceReport()
   local longestMove = steps[#steps]
   local longestTime = times[#times]
   local mostChecks = checks[#checks]
+  local numberFailedRooms = table.size(demonwalker.failedRooms or {})
   demonwalker:echo("Performance report of current demonwalk!")
   demonwalker:echo("Note: Number of steps actually taken may be more or less")
   demonwalker:echo("as the walker does not always take the reported number of")
@@ -437,6 +482,7 @@ function demonwalker:performanceReport()
   demonwalker:echo(string.format("Avg checks per move     : %.3f", averageChecks))
   demonwalker:echo(string.format("Median checks per move  : %.3f", medianChecks))
   demonwalker:echo(string.format("Most checks             : %0d", mostChecks))
+  demonwalker:echo(string.format("Rooms we failed to hit  : %0d", numberFailedRooms))
   demonwalker:echo("End of performance report")
 end
 

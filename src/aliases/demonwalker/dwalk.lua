@@ -71,8 +71,10 @@ elseif command == "explore" then
   return
 elseif command == "update" then
   uninstallPackage("demonnicAutoWalker")
-  installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")
-  demonwalker:echo("demonnicAutoWalker package updated")
+  tempTimer(2, function()
+    installPackage("https://github.com/demonnic/demonnicAutoWalker/releases/latest/download/demonnicAutoWalker.mpackage")
+    demonwalker:echo("demonnicAutoWalker package updated")
+  end)
   return
 end
 demonwalker:usage(matches[1])

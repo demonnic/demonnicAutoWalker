@@ -82,8 +82,11 @@ If it can't get to a room, it just moves on to the next.
     * avoidRooms: a list of roomIDs to make sure is not included in **this** walk. Not saved between walks.
     * searchTargets: a list of items to check for. IE {"a thief on a leaf", "a dracnari hunk", "a dracnari dreamer"}.
       * If this list is provided, then demonwalker will check every room for each of these items, and if any of them are found then and only then will it raise `demonwalker.arrived`. This makes it easy to automate looking for one or more creatures or items in an area, without worrying about stopping the walker yourself.
+      * If you start an entry with `"Match:"` then it will use string.match to check for targets/items. For instance, `"Match:Drakt"` will stop for anything with `Drakt` in the name at all.
 * demonwalker:performanceReport()
   * prints out some performance information on the current walk if still running a walk, or the last walk if one has been completed.
+* demonwalker:getFailedRooms()
+  * Returns a table of roomIDs which could not be reached by demonwalker during the most recent walk.
 
 ## Events
 
